@@ -1,15 +1,26 @@
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+aws_region = os.getenv("AWS_DEFAULT_REGION")
 
 
-dynamodb = boto3.resource("dynamodb", region_name="us-west-2")  
+dynamodb = boto3.resource(
+    "dynamodb",
+    aws_access_key_id=aws_access_key_id,
+    aws_secret_access_key=aws_secret_access_key,
+    region_name=aws_region
+)
 
 
 users_table_name = "Users"
 global_count_table_name = "Global_count"
 
-# show existing tables
-existing_tables = boto3.client("dynamodb", region_name="us-west-2").list_tables()["TableNames"]
+existing_tables = boto3.client("dynamodb", region_name= aws_region).list_tables()["TableNames"]
 
 # Create Users table if it`s not exists
 if users_table_name not in existing_tables:
@@ -57,3 +68,5 @@ if global_count_table_name not in existing_tables:
         print(f"Error creating global counts table: {e.response['Error']['Message']}")
 else:
     print(f"Global counts Table already exists.")
+
+
