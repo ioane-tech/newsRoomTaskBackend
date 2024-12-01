@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 import os
 from websocket.handler import check_global_counts_length
+from flask_socketio import emit
+from socketio_instance import socketio
 
 
 
@@ -28,6 +30,7 @@ globalCountTable_name = "Global_count"
 usersTable = dynamodb.Table(userTable_name)
 globalCountTable = dynamodb.Table(globalCountTable_name)
 
+socketio = socketio
 
 # create user in users table
 def create_user(username, password):
@@ -88,6 +91,7 @@ def increment_sign_in_count(username, ):
         )
         print(f"Sign-in count for {username} on {today_date} incremented successfully.")
         
+        socketio.emit("update_counts", {"username": username, "date": today_date})
         check_global_counts_length()
         
         return {"message": f"Sign-in count for {username} on {today_date} incremented successfully."}
