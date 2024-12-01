@@ -1,9 +1,11 @@
 import boto3
+from botocore.exceptions import NoCredentialsError
 from botocore.exceptions import ClientError
-from flask import jsonify
+
 from dotenv import load_dotenv
 from datetime import datetime
 import os
+from websocket.handler import check_global_counts_length
 
 
 
@@ -50,26 +52,6 @@ def get_user(username):
         print(e.response["Error"]["Message"])
         return {"error": e.response["Error"]["Message"]}
     
-
-
-#increment global sing-in counts
-def increment_sign_in_count(username, ):
-    try:
-        today_date = datetime.utcnow().isoformat()
-
-        
-        globalCountTable.put_item(
-            Item={
-                "username": username,
-                "date": today_date,
-            }
-        )
-        print(f"Sign-in count for {username} on {today_date} incremented successfully.")
-        return {"message": f"Sign-in count for {username} on {today_date} incremented successfully."}
-    except ClientError as e:
-        print(e.response["Error"]["Message"])
-        return {"error": e.response["Error"]["Message"]}
-
 #get counts from global counts table
 def get_counts(username):
     try:
@@ -91,3 +73,37 @@ def get_counts(username):
     except ClientError as e:
         print(e.response["Error"]["Message"])
         return {"error": e.response["Error"]["Message"]}
+
+#increment global sing-in counts
+def increment_sign_in_count(username, ):
+    try:
+        today_date = datetime.utcnow().isoformat()
+
+        
+        globalCountTable.put_item(
+            Item={
+                "username": username,
+                "date": today_date,
+            }
+        )
+        print(f"Sign-in count for {username} on {today_date} incremented successfully.")
+        
+        check_global_counts_length()
+        
+        return {"message": f"Sign-in count for {username} on {today_date} incremented successfully."}
+    except ClientError as e:
+        print(e.response["Error"]["Message"])
+        return {"error": e.response["Error"]["Message"]}
+
+    
+    
+def get_global_counts_length():
+    try:
+        response = globalCountTable.scan()
+        return len(response['Items'])
+    except NoCredentialsError:
+        print("Credentials not available")
+        return 0
+    except Exception as e:
+        print(f"Error checking DynamoDB table: {e}")
+        return 0
