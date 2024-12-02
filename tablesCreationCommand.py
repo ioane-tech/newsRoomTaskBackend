@@ -17,8 +17,10 @@ dynamodb = boto3.resource(
 )
 
 
-users_table_name = "Users"
-global_count_table_name = "Global_count"
+users_table_name = "newsRoomUsers"
+blogs_table_name = "blogs"
+comments_table_name = "comments"
+
 
 existing_tables = boto3.client("dynamodb", region_name= aws_region).list_tables()["TableNames"]
 
@@ -45,28 +47,54 @@ else:
     print(f"Users Table already exists.")
 
 
-# Create Global_count table if it`s not exists
-if global_count_table_name not in existing_tables:
+
+# Create blogs table
+if blogs_table_name not in existing_tables:
     try:
-        global_count_table = dynamodb.create_table(
-            TableName=global_count_table_name,
+        blogs_table = dynamodb.create_table(
+            TableName=blogs_table_name,
             KeySchema=[
-                {"AttributeName": "username", "KeyType": "HASH"}, 
-                {"AttributeName": "date", "KeyType": "RANGE"} 
+                {"AttributeName": "blogId", "KeyType": "HASH"},
             ],
             AttributeDefinitions=[
-                {"AttributeName": "username", "AttributeType": "S"},
-                {"AttributeName": "date", "AttributeType": "S"},
+                {"AttributeName": "blogId", "AttributeType": "S"},
             ],
             ProvisionedThroughput={
                 "ReadCapacityUnits": 5,
                 "WriteCapacityUnits": 5,
             },
         )
-        print(f"Global counts Table created successfully.")
+        print("Blogs Table created successfully.")
     except ClientError as e:
-        print(f"Error creating global counts table: {e.response['Error']['Message']}")
+        print(f"Error creating blogs table: {e.response['Error']['Message']}")
 else:
-    print(f"Global counts Table already exists.")
+    print("Blogs Table already exists.")
+
+
+# Create Comments table if it doesn't exist
+if comments_table_name not in existing_tables:
+    try:
+        comments_table = dynamodb.create_table(
+            TableName=comments_table_name,
+            KeySchema=[
+                {"AttributeName": "blogId", "KeyType": "HASH"},  
+                {"AttributeName": "commentId", "KeyType": "RANGE"},
+            ],
+            AttributeDefinitions=[
+                {"AttributeName": "blogId", "AttributeType": "S"}, 
+                {"AttributeName": "commentId", "AttributeType": "S"},
+            ],
+            ProvisionedThroughput={
+                "ReadCapacityUnits": 5,
+                "WriteCapacityUnits": 5,
+            },
+        )
+        print("Comments Table created successfully.")
+    except ClientError as e:
+        print(f"Error creating comments table: {e.response['Error']['Message']}")
+else:
+    print("Comments Table already exists.")
+
+
 
 

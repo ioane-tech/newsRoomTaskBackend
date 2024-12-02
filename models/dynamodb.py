@@ -1,12 +1,11 @@
 import boto3
-from botocore.exceptions import NoCredentialsError
 from botocore.exceptions import ClientError
 
 from dotenv import load_dotenv
 from datetime import datetime
 import os
-from websocket.handler import check_global_counts_length
-from flask_socketio import emit
+
+
 from socketio_instance import socketio
 
 
@@ -24,11 +23,14 @@ dynamodb = boto3.resource(
     region_name=aws_region
 )
 
-userTable_name = "Users"
-globalCountTable_name = "Global_count"
+userTable_name = "newsRoomUsers"
+blogs_table_name = "blogs"
+comments_table_name = "comments"
 
 usersTable = dynamodb.Table(userTable_name)
-globalCountTable = dynamodb.Table(globalCountTable_name)
+blogsTable = dynamodb.Table(blogs_table_name)
+commentsTable =  dynamodb.Table(comments_table_name)
+
 
 socketio = socketio
 
@@ -55,59 +57,77 @@ def get_user(username):
         print(e.response["Error"]["Message"])
         return {"error": e.response["Error"]["Message"]}
     
-#get counts from global counts table
-def get_counts(username):
-    try:
-        if not username:
-            response = globalCountTable.scan()
-        else:
-            response = globalCountTable.query(
-                KeyConditionExpression="username = :username",
-                ExpressionAttributeValues={
-                    ":username": username
-                }
-        )
 
-        #error if user not found
-        if not response.get("Items"):
-            return {"message": "No users found with that username"}
+# Add blog to blogs table
+def add_blog(blog_id, title, description, image, author):
+    try:
+        publish_time = datetime.now().isoformat()
         
+        blogsTable.put_item(
+            Item={
+                "blogId": blog_id,
+                "title": title,
+                "description": description,
+                "image": image,
+                "publishTime": publish_time,
+                "author": author,
+            }
+        )
+        return {"message": "Blog added successfully"}
+    except ClientError as e:
+        print(e.response["Error"]["Message"])
+        return {"error": e.response["Error"]["Message"]}
+
+
+# get blogs from blogs table
+def get_blogs():
+    try:
+        response = blogsTable.scan()
         return response.get("Items", [])
     except ClientError as e:
         print(e.response["Error"]["Message"])
         return {"error": e.response["Error"]["Message"]}
-
-#increment global sing-in counts
-def increment_sign_in_count(username, ):
+    
+# delete blog
+def delete_blog(blog_id):
     try:
-        today_date = datetime.utcnow().isoformat()
-
-        
-        globalCountTable.put_item(
-            Item={
-                "username": username,
-                "date": today_date,
-            }
+        blogsTable.delete_item(
+            Key={"blogId": blog_id}
         )
-        print(f"Sign-in count for {username} on {today_date} incremented successfully.")
         
-        socketio.emit("update_counts", {"username": username, "date": today_date})
-        check_global_counts_length()
-        
-        return {"message": f"Sign-in count for {username} on {today_date} incremented successfully."}
+        return {"message": "blog deleted successfully"}
+    
     except ClientError as e:
         print(e.response["Error"]["Message"])
         return {"error": e.response["Error"]["Message"]}
 
-    
-    
-def get_global_counts_length():
+
+# Add comment to comments table
+def add_comment(blog_id, comment_id, comment):
     try:
-        response = globalCountTable.scan()
-        return len(response['Items'])
-    except NoCredentialsError:
-        print("Credentials not available")
-        return 0
-    except Exception as e:
-        print(f"Error checking DynamoDB table: {e}")
-        return 0
+        date_of_comment = datetime.now().isoformat()
+        
+        commentsTable.put_item(
+            Item={
+                "blogId": blog_id,
+                "commentId": comment_id,
+                "comment": comment,
+                "dateOfComment": date_of_comment,
+            }
+        )
+        return {"message": "Comment added successfully"}
+    except ClientError as e:
+        print(e.response["Error"]["Message"])
+        return {"error": e.response["Error"]["Message"]}
+
+
+# get comments for blog
+def get_comments(blog_id):
+    try:
+        response = commentsTable.query(
+            KeyConditionExpression=boto3.dynamodb.conditions.Key("blogId").eq(blog_id)
+        )
+        return response.get("Items", [])
+    except ClientError as e:
+        print(e.response["Error"]["Message"])
+        return {"error": e.response["Error"]["Message"]}

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token
 from auth.utils import hash_password, check_password
-from models.dynamodb import create_user, increment_sign_in_count, get_user
+from models.dynamodb import create_user, get_user
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -34,7 +34,6 @@ def login():
     if not user or not check_password(password, user["password"]):
         return jsonify({"message": "Invalid credentials"}), 401
 
-    increment_sign_in_count(username)
     token = create_access_token(identity=username)
     return jsonify({"token": token}), 200
 
